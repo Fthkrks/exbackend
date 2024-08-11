@@ -4,6 +4,9 @@ const Categories = require("../models/categories.model");
 const Response = require("../utils/response");
 const CustomError = require("../utils/error");
 const Enum = require("../config/enum");
+const AuditLogs = require("../utils/AuditLogs");
+const logger = require("../utils/logger/LoggerClass");
+
 
 /* GET users listing. */
 router.get("/", async (req, res, next) => {
@@ -34,8 +37,12 @@ router.post("/add", async (req, res) => {
 
     await category.save();
 
+    AuditLogs.info( req.user?.email, "Categories", "Add", category);
+    logger.info(req.user?.email, "Categories", "Add", category);
+
     res.json(Response.successResponse({ success: true }));
   } catch (error) {
+    logger.error(req.user?.email, "Categories", "Add", error)
     let errorResponse = Response.erorResponse(error);
     res.status(errorResponse.code).json(errorResponse);
   }
@@ -58,6 +65,9 @@ router.post("/update", async (req, res) => {
 
     await Categories.updateOne({ _id: body._id }, updates);
 
+    AuditLogs.info(req.user?.email, "Categories", "Update", {_id: body._id, ...updates})
+
+
     res.json(Response.successResponse({ success: true }));
   } catch (error) {
     let errorResponse = Response.erorResponse(error);
@@ -77,6 +87,9 @@ router.post("/delete", async (req, res) => {
       );
 
     await Categories.findOneAndDelete({ _id: body._id });
+
+    AuditLogs.info(req.user?.email, "Categories", "Delete", {_id: body._id})
+
 
     res.json(Response.successResponse({ success: true }));
   } catch (error) {

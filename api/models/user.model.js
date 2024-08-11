@@ -2,13 +2,14 @@ const mongoose = require("mongoose");
 
 
 const schema = mongoose.Schema({
-    email: {type: String, required: true},
+    email: {type: String, required: true, unique: true},
     password: {type: String, required: true},
     is_active: {type: String, default: true},
     first_name: String,
     last_name: String,
     phone_number: String
 },{
+    versionKey: false,
     timestamps:{
         createdAt: "created-at",
         updatedAt: "updated_at",
