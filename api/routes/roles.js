@@ -1,14 +1,14 @@
 const express = require("express");
 const router = express.Router();
-
 const Response = require("../utils/response");
 const Roles = require("../models/roles.model");
 const RolePrivileges = require("../models/rolePrivileges.model");
 const CustomError = require("../utils/error");
 const Enum = require("../config/enum");
 const role_privilages = require("../config/rolePrivilages");
+const config = require("../config");
 const auth = require("../utils/auth")();
-
+const i18n = new (require("../utils/i18n"))(config.DEFAULT_LANG);
 
 router.all("*", auth.authenticate(), (req, res, next) =>{
   next();
@@ -31,8 +31,8 @@ router.post("/add", auth.checkRoles("roles_add") ,async (req, res) => {
     if (!body.role_name)
       throw new CustomError(
         Enum.HTTP_CODES.BAD_REQUEST,
-        "Validation Error!",
-        "role_name fields must be filled"
+        i18n.translate("COMMON.VALIDITION_ERROR_TITLE", req.user.language),
+        i18n.translate("COMMON.FIELD_MIUST_BE_FILLED", req.user.language, ["role_name"])
       );
 
     if (
@@ -78,8 +78,8 @@ router.post("/update", auth.checkRoles("roles_update") ,async (req, res) => {
     if (!body._id)
       throw new CustomError(
         Enum.HTTP_CODES.BAD_REQUEST,
-        "Validation Error!",
-        "_id field must be filled"
+        i18n.translate("COMMON.VALIDITION_ERROR_TITLE", req.user.language),
+        i18n.translate("COMMON.FIELD_MIUST_BE_FILLED", req.user.language, ["_id"])
       );
     let updates = {};
 
@@ -134,8 +134,8 @@ router.post("/delete", auth.checkRoles("roles_delete") ,async (req, res) => {
     if (!body._id)
       throw new CustomError(
         Enum.HTTP_CODES.BAD_REQUEST,
-        "Validation Error!",
-        "_id field must be filled"
+        i18n.translate("COMMON.VALIDITION_ERROR_TITLE", req.user.language),
+        i18n.translate("COMMON.FIELD_MIUST_BE_FILLED", req.user.language, ["_id"])
       );
 
     await Roles.findOneAndDelete({ _id: body._id });

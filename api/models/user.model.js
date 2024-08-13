@@ -2,8 +2,8 @@ const mongoose = require("mongoose");
 const is = require("is_js");
 const {PASS_LENGTH, HTTP_CODES} = require("../config/enum");
 const CustomError = require("../utils/error");
-const bcrypt = require("bcrypt") 
-
+const bcrypt = require("bcrypt"); 
+const config = require("../config");
 
 const schema = mongoose.Schema({
     email: {type: String, required: true, unique: true},
@@ -11,7 +11,8 @@ const schema = mongoose.Schema({
     is_active: {type: String, default: true},
     first_name: String,
     last_name: String,
-    phone_number: String
+    phone_number: String,
+    language: {type: String, default: config.DEFAULT_LANG},
 },{
     versionKey: false,
     timestamps:{
