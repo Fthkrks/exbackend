@@ -7,8 +7,14 @@ const RolePrivileges = require("../models/rolePrivileges.model");
 const CustomError = require("../utils/error");
 const Enum = require("../config/enum");
 const role_privilages = require("../config/rolePrivilages");
+const auth = require("../utils/auth")();
 
-router.get("/", async (req, res) => {
+
+router.all("*", auth.authenticate(), (req, res, next) =>{
+  next();
+})
+
+router.get("/", auth.checkRoles("roles_view") , async (req, res) => {
   try {
     let roles = await Roles.find({});
 
@@ -19,7 +25,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.post("/add", async (req, res) => {
+router.post("/add", auth.checkRoles("roles_add") ,async (req, res) => {
   let body = req.body;
   try {
     if (!body.role_name)
@@ -66,7 +72,7 @@ router.post("/add", async (req, res) => {
   }
 });
 
-router.post("/update", async (req, res) => {
+router.post("/update", auth.checkRoles("roles_update") ,async (req, res) => {
   let body = req.body;
   try {
     if (!body._id)
@@ -122,7 +128,7 @@ router.post("/update", async (req, res) => {
   }
 });
 
-router.post("/delete", async (req, res) => {
+router.post("/delete", auth.checkRoles("roles_delete") ,async (req, res) => {
   let body = req.body;
   try {
     if (!body._id)
@@ -141,7 +147,7 @@ router.post("/delete", async (req, res) => {
   }
 });
 
-router.get("/role_privilages", async (req, res) => {
+router.get("/role_privilages" ,async (req, res) => {
   res.json(role_privilages);
 });
 
