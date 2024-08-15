@@ -9,6 +9,7 @@ const role_privilages = require("../config/rolePrivilages");
 const config = require("../config");
 const auth = require("../utils/auth")();
 const i18n = new (require("../utils/i18n"))(config.DEFAULT_LANG);
+const UserRole = require("../models/userRole.model");
 
 router.all("*", auth.authenticate(), (req, res, next) =>{
   next();
@@ -16,7 +17,14 @@ router.all("*", auth.authenticate(), (req, res, next) =>{
 
 router.get("/", auth.checkRoles("roles_view") , async (req, res) => {
   try {
-    let roles = await Roles.find({});
+    let roles = await Roles.find({}).lean();
+
+   // roles = JSON.parse(JSON.stringify(roles)); 2.yol permission göstermek için 
+
+    for (let i=0; i <roles.length; i++){
+      let permission = await RolePrivileges.find({role_id: roles[i]._id});
+      roles[i].permission = permission;
+    }
 
     res.json(Response.successResponse(roles));
   } catch (error) {
@@ -81,6 +89,13 @@ router.post("/update", auth.checkRoles("roles_update") ,async (req, res) => {
         i18n.translate("COMMON.VALIDITION_ERROR_TITLE", req.user.language),
         i18n.translate("COMMON.FIELD_MIUST_BE_FILLED", req.user.language, ["_id"])
       );
+
+      let userRole = await UserRole.findOne({user_id: req.user.id, role_id: body._id})
+      if(userRole){
+        throw new CustomError(Enum.HTTP_CODES.FORBIDDEN, i18n.translate("COMMON.NEED_PERMISSIONS", req.user.language), )
+      }
+
+
     let updates = {};
 
     if (body.role_name) updates.role_name = body.role_name;

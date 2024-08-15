@@ -13,6 +13,21 @@ const config = require("../config");
 const jwt = require("jwt-simple");
 const i18n = new (require("../utils/i18n"))(config.DEFAULT_LANG);
 const auth = require("../utils/auth")();
+const {rateLimit} = require("express-rate-limit");
+const RateLimitMongo = require("rate-limit-mongo");
+
+
+const limiter = rateLimit({
+  store: new RateLimitMongo({
+    uri: config.MONGODB_URI,
+    collectionName: "rateLimits",
+    expireTimeMs: 15 * 60 *100, // 15 minutes
+  }),
+	windowMs: 15 * 60 * 1000, // 15 minutes
+	limit: 5, // Limit each IP to 100 requests per `window` (here, per 15 minutes).
+	// standardHeaders: 'draft-7', // draft-6: `RateLimit-*` headers; draft-7: combined `RateLimit` header
+	legacyHeaders: false, // Disable the `X-RateLimit-*` headers.
+});
 
 /* GET users listing. */
 
@@ -86,7 +101,7 @@ router.post("/register", async (req, res) => {
   }
 });
 
-router.post("/auth", async (req, res) => {
+router.post("/auth", limiter, async (req, res) => {
   try {
     let { email, password } = req.body;
 
@@ -97,15 +112,15 @@ router.post("/auth", async (req, res) => {
     if (!user)
       throw new CustomError(
         Enum.HTTP_CODES.UNAUTHORIZED,
-        i18n.translate("COMMON.VALIDITION_ERROR_TITLE", req.user.language),
-        i18n.translate("USER.AUTH_ERROR", req.user.language),
+        i18n.translate("COMMON.VALIDITION_ERROR_TITLE", config.DEFAULT_LANG),
+        i18n.translate("USER.AUTH_ERROR", config.DEFAULT_LANG),
       );
 
     if (!user.validPassword(password))
       throw new CustomError(
         Enum.HTTP_CODES.UNAUTHORIZED,
-        i18n.translate("COMMON.VALIDITION_ERROR_TITLE", req.user.language),
-        i18n.translate("USER.AUTH_ERROR", req.user.language),
+        i18n.translate("COMMON.VALIDITION_ERROR_TITLE", config.DEFAULT_LANG),
+        i18n.translate("USER.AUTH_ERROR", config.DEFAULT_LANG),
       );
 
     let payload = {
@@ -134,7 +149,13 @@ router.all("*", auth.authenticate(), (req, res, next) => {
 
 router.get("/", auth.checkRoles("user_view"), async (req, res) => {
   try {
-    let users = await Users.find({});
+    let users = await Users.find({}, {password: 0}).lean();
+
+    for(let i =0; i < users.length; i++){
+      let roles = await UserRoles.find({user_id: users[i]._id}).populate("role_id");
+      users[i].roles = roles;
+    }
+
     res.json(Response.successResponse(users));
   } catch (error) {
     res.json(Response.erorResponse(error));
@@ -245,6 +266,11 @@ router.post("/update", auth.checkRoles("user_update"), async (req, res) => {
     if (body.first_name) updates.first_name = body.first_name;
     if (body.last_name) updates.last_name = body.last_name;
     if (body.phone_number) updates.phone_number = body.phone_number;
+
+    if(body._id == req.user.id){
+      // throw new CustomError(Enum.HTTP_CODES.FORBIDDEN, i18n.translate("COMMON.NEED_PERMISSIONS", req.user.language), )
+      body.role = {};
+    }
 
     if (Array.isArray(body.roles) && body.roles.length > 0) {
       let userRoles = await UserRoles.find({ user_id: body._id });
